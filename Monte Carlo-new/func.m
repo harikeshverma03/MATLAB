@@ -60,21 +60,25 @@ classdef func
             end
             y(t) = C(t)*(D(t)- k*E(t) - func.sumation(H(t,:))) + y(t+1);
         end
-        function [x,y,z] = Alloc_linear(res_linear,t,n)
-                    Alloc_linear = zeros(t+1,3+2*n);
+        function [x,y,z] = Alloc_linear(res_linear,t,n,Sol_E,Demand)
+                    Alloc_linear = zeros(t+1,6+2*n);
                     sum_reg = zeros(1,t);
                     sum_hol = zeros(1,t);
                     for i = 1:n
                         Alloc_linear(1,1+i) = i;
                         Alloc_linear(1,1+i+n) = i;
-
                     end
                     Alloc_linear(1,2+2*n) = 1;
                     Alloc_linear(1,3+2*n) = 1;
+                    Alloc_linear(1,4+2*n) = 2;
+                    Alloc_linear(1,5+2*n) = 1;
+                    Alloc_linear(1,6+2*n) = 1;
                     for i = 1:t
                         Alloc_linear(1+i,1) = i;
                     end
                     w = 1;h= 1+n*t;
+                    Alloc_linear(2:25,4+2*n) = Sol_E(:,1);
+                    %Alloc_linear(2:25,5+2*n:6+2*n) = Demand;
                     for i=1:t
                         for j =1:n
                             Alloc_linear(1+i,1+j) = res_linear(w);
@@ -85,9 +89,14 @@ classdef func
                         end
                         Alloc_linear(1+i,2+2*n) = res_linear(h);
                         Alloc_linear(1+i,3+2*n) = res_linear(h+t*(n+2));
+                        Alloc_linear(1+i,5+2*n) = Demand(i,1) - sum_reg(i) -res_linear(h) - Sol_E(i,1);
+                        Alloc_linear(1+i,6+2*n) = Demand(i,2) - sum_hol(i) -res_linear(h+t*(n+2)) - Sol_E(i,1);
                         h=h+1;
                         w=1+i;
                     end
+                    Demand = [1 2;Demand];
+                    Alloc_linear = [Demand,Alloc_linear];
+                    
                     x = Alloc_linear;
                     y = sum_reg;
                     z = sum_hol;

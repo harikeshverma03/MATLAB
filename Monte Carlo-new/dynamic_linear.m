@@ -9,15 +9,23 @@ Cost_imp_sd = 4;
  
  E_mu = csvread('solar.csv');
  E_sd = csvread('solar_sd.csv');
- for i = 1:p
-    [dyn(:,:,i),sum_hydro(i,:),obj_dyn(i,:),obj_dyn1(i)] = run_dyn(n,Cost_imp_mu,Beta,Rain_mu,Rain_sd,V1_mu,V1_sd,E_mu,E_sd);
+ [dyn,sum_hydro(1,:),obj_dyn] = run_dyn(n,Cost_imp_mu,Beta,Rain_mu,Rain_sd,V1_mu,V1_sd,E_mu,E_sd);
+ for i = 2:p
+    [temp,sum_hydro(i,:),obj_temp] = run_dyn(n,Cost_imp_mu,Beta,Rain_mu,Rain_sd,V1_mu,V1_sd,E_mu,E_sd);
+    dyn = [dyn,temp];
+    obj_dyn = [obj_dyn,obj_temp];
+    %obj_dyn1 = [obj_dyn1,obj_temp1];
+    clearvars temp;
  end
+ %disp(sum_hydro);
 obj_dyn_mu = mean(obj_dyn');
 obj_dyn_sd = std(obj_dyn');
 sum_hydro = mean(sum_hydro);
+disp(sum_hydro);
 %disp(sum);
 fprintf('The value of Objective function after %d iterations of %d samples is: %e\n',p,n, mean(obj_dyn_mu));
-
+csvwrite('Hydro_Alloc_dyn.csv',dyn);
+csvwrite('Objective_Value_dynamic.csv',obj_dyn);
 Day = csvread('Synthetic_Days.csv');
 Demand_mu(:,:,1) = xlsread('Demand Data.csv', 'A2:B25');
 Demand_mu(:,:,2) = xlsread('Demand Data.csv', 'C2:D25');
@@ -77,26 +85,42 @@ obj_lin_mu = zeros(1,12);
 obj_lin_mu1 = zeros(1,12);
 dem_mean = zeros(24,2,12);
 sol_mean =zeros(24,2,12);
-Alloc_linear = zeros(25,17,12);
-
+Alloc_linear = zeros(25,17);
+obj_lin_sd = [];
+obj_lin_sd1 = [];
 for i = 1:12
     disp(i);
-     for j = 1:p
-        Hydro_avg = sum_hydro(i);
-       [Alloc,reg1,hol1,obj_lin_mu(j,i),obj_lin_mu1(j,i),obj_lin_sd(j,i),obj_lin_sd1(j,i)] = run_linear(Day(i,:),Beta,Hydro_avg,Demand_mu(:,:,i),Demand_sd(:,:,i),Cost_imp_mu,Cost_imp_sd,Sol_mu(:,:,i),Sol_sd(:,:,i),n);
-       Alloc_linear(:,:,i) = Alloc_linear(:,:,i)+Alloc;
+    Hydro_avg = sum_hydro(i);
+    [Alloc_temp,reg1,hol1,cobj_lin_mu,cobj_lin_sd] = run_linear(Day(i,:),Beta,Hydro_avg,Demand_mu(:,:,i),Demand_sd(:,:,i),Cost_imp_mu,Cost_imp_sd,Sol_mu(:,:,i),Sol_sd(:,:,i),n);
+    reg(i,:) = reg(i,:) + reg1;
+    hol(i,:) = hol(i,:) + hol1;
+    for j = 2:p
+       [Alloc,reg1,hol1,obj_mu_temp,obj_sd_temp] = run_linear(Day(i,:),Beta,Hydro_avg,Demand_mu(:,:,i),Demand_sd(:,:,i),Cost_imp_mu,Cost_imp_sd,Sol_mu(:,:,i),Sol_sd(:,:,i),n);
+       Alloc_temp = [Alloc_temp, Alloc];
+       cobj_lin_mu = [cobj_lin_mu; obj_mu_temp];
+       cobj_lin_sd = [cobj_lin_sd; obj_sd_temp];
+       %cobj_lin_mu1 = [cobj_lin_mu1; obj_mu_temp1];
+       %cobj_lin_sd1 = [cobj_lin_sd1; obj_sd_temp1];
        reg(i,:) = reg(i,:) + reg1;
        hol(i,:) = hol(i,:) + hol1;
        %[Hyd_reg(i,:),Hyd_hol(i,:)] = func.Alloc_Hydro(Alloc_linear(:,:,i),24);
-     end
-    Alloc_linear(:,:,i) = Alloc_linear(:,:,i)/p;
+    end
+    s = size(Alloc_temp);
+    disp(size(cobj_lin_mu));
+    d = size(cobj_lin_mu);
+    %e = size(cobj_lin_mu1);
+    obj_lin_mu(1:d(1),i) = cobj_lin_mu;
+    %obj_lin_mu1(1:e(1),i) = cobj_lin_mu1;
+    obj_lin_sd = [obj_lin_sd, cobj_lin_sd];
+    %obj_lin_sd1 = [obj_lin_sd1, cobj_lin_sd1];
+    Alloc_linear((25*(i-1)+1):25*i,1:s(2)) = Alloc_temp;
     reg(i,:) = reg(i,:)/p;
     hol(i,:) = hol(i,:)/p;
 end
 fprintf('The objective value from Monte Carlo Optimised is: %e\n', sum(mean(obj_lin_mu)));
 fprintf('The objective value from Monte Carlo Realistic is: %e\n', sum(mean(obj_lin_mu1)));
 
-disp(obj_lin_mu1);
+%disp(obj_lin_mu1);
 x1 = 1:24;
 subplot(2,2,[1,2]);
 x = 1:12;
@@ -105,12 +129,13 @@ subplot(2,2,3);
     plot(x1,reg(i,:));
     subplot(2,2,4); 
     plot(x1,hol(i,:));
-csvwrite('Objective_Value_dynamic.csv',obj_dyn);
-csvwrite('Objective_Value_dynamic-corrected.csv',obj_dyn1);
+
+%csvwrite('Objective_Value_dynamic-corrected.csv',obj_dyn1);
 obj_dyn = [obj_dyn_mu,obj_dyn_sd];
-obj_lin = [obj_lin_mu,obj_lin_sd; obj_lin_mu1,obj_lin_sd1];
-csvwrite('Hydro_Alloc_dyn.csv',dyn);
+obj_lin = [obj_lin_mu];
+%obj_lin1 = [obj_lin_mu1];
 csvwrite('Dynamic_objective.csv',obj_dyn);
 csvwrite('Monthly_Alloc.csv',Alloc_linear);
 csvwrite('Linear_objective.csv',obj_lin);
+%csvwrite('Linear_objective-corrected.csv',obj_lin1);
 end
