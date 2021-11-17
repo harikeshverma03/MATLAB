@@ -60,7 +60,7 @@ classdef func
             end
             y(t) = C(t)*(D(t)- k*E(t) - func.sumation(H(t,:))) + y(t+1);
         end
-        function [x,y,z] = Alloc_linear(res_linear,t,n,Sol_E,Demand)
+        function [x,y,z] = Alloc_linear(res_linear,t,n,Sol_E,Demand,cost_imp)
                     Alloc_linear = zeros(t+1,6+2*n);
                     sum_reg = zeros(1,t);
                     sum_hol = zeros(1,t);
@@ -96,7 +96,8 @@ classdef func
                     end
                     Demand = [1 2;Demand];
                     Alloc_linear = [Demand,Alloc_linear];
-                    
+                    cost = ones(25,1) * cost_imp;
+                    Alloc_linear = [Alloc_linear, cost];
                     x = Alloc_linear;
                     y = sum_reg;
                     z = sum_hol;

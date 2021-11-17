@@ -22,7 +22,7 @@ Alloc_lin = [];
                      counter = counter +1;
                      objval(counter,1) = y.objval;
                      sum1 = sum1 +  y.x';
-                     [temp,~,~] = func.Alloc_linear(y.x',t,n,Sol_E(:,:,i),Demand(:,:,i));
+                     [temp,~,~] = func.Alloc_linear(y.x',t,n,Sol_E(:,:,i),Demand(:,:,i), Cost_imp(i));
                      Alloc_lin = [Alloc_lin, temp];
                  end
      end
@@ -49,6 +49,6 @@ Alloc_lin = [];
     %obj_lin_sd1 = std(objval1);
     fprintf('The value of Objective function(Monte Carlo Optimised) is: %e\n', objval_mu);
     %fprintf('The value of Objective function(Monte Carlo Realistic) is: %e\n', objval_mu1);
-    [~,sum_reg,sum_hol] = func.Alloc_linear(res_linear,t,n,Sol_mu,Demand_mu);
+    [~,sum_reg,sum_hol] = func.Alloc_linear(res_linear,t,n,Sol_mu,Demand_mu ,Cost_imp(i) );
     
 end
